@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinLens — Financial Intelligence</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- Watchlist sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">📋 Watchlist</span>
+      <button class="sidebar-close" onclick="toggleWatchlist()">✕</button>
+    </div>
+    <div class="watchlist-add">
+      <input type="text" id="ticker-input" placeholder="Add ticker, e.g. AAPL" maxlength="10" onkeydown="if(event.key==='Enter') addTicker()" />
+      <button onclick="addTicker()">+</button>
+    </div>
+    <div class="sidebar-list" id="watchlist-items"></div>
+    <div class="sidebar-divider">Past Analyses</div>
+    <div class="sidebar-list" id="history-list"></div>
+    <button class="sidebar-clear" onclick="clearHistory()">Clear history</button>
+  </div>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleWatchlist()"></div>
+
+  <div class="app">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <div class="logo">FinLens</div>
+        <div class="logo-sub">Financial Intelligence</div>
+      </div>
+      <button class="watchlist-btn" onclick="toggleWatchlist()">📋 Watchlist &amp; History</button>
+    </div>
+
+    <!-- Mode selector -->
+    <div class="mode-grid">
+      <button class="mode-card active" id="mode-earnings" onclick="setMode('earnings')">
+        <span class="mode-icon">📞</span>
+        <span class="mode-label">Earnings Call</span>
+        <span class="mode-desc">Transcript analysis</span>
+      </button>
+      <button class="mode-card" id="mode-sec" onclick="setMode('sec')">
+        <span class="mode-icon">📑</span>
+        <span class="mode-label">SEC Filing</span>
+        <span class="mode-desc">10-K / 10-Q / 8-K</span>
+      </button>
+      <button class="mode-card" id="mode-sentiment" onclick="setMode('sentiment')">
+        <span class="mode-icon">📰</span>
+        <span class="mode-label">News Sentiment</span>
+        <span class="mode-desc">Headlines &amp; articles</span>
+      </button>
+      <button class="mode-card" id="mode-redflags" onclick="setMode('redflags')">
+        <span class="mode-icon">🚩</span>
+        <span class="mode-label">Red Flag Scanner</span>
+        <span class="mode-desc">Forensic analysis</span>
+      </button>
+      <button class="mode-card" id="mode-compare" onclick="setMode('compare')">
+        <span class="mode-icon">⚖️</span>
+        <span class="mode-label">Compare</span>
+        <span class="mode-desc">Company vs company</span>
+      </button>
+    </div>
+
+    <!-- Ticker tag -->
+    <div class="ticker-row">
+      <input type="text" id="ticker-tag" placeholder="Ticker (optional, e.g. NVDA)" maxlength="10" />
+    </div>
+
+    <!-- Input area -->
+    <div class="input-section">
+
+      <!-- Compare mode has two inputs -->
+      <div id="compare-inputs" style="display:none;">
+        <div class="input-card">
+          <div class="input-label">Document 1</div>
+          <textarea id="compare-text-1" placeholder="Paste first company's earnings call, filing, or text here…"></textarea>
+        </div>
+        <div class="input-sep">vs</div>
+        <div class="input-card">
+          <div class="input-label">Document 2</div>
+          <textarea id="compare-text-2" placeholder="Paste second company's earnings call, filing, or text here…"></textarea>
+        </div>
+      </div>
+
+      <!-- Single input for all other modes -->
+      <div id="single-input">
+        <div class="input-card">
+          <div class="input-label-row">
+            <span class="input-label" id="input-label">Paste earnings call transcript</span>
+            <span class="word-count" id="word-count">0 words</span>
+          </div>
+          <textarea id="main-text" placeholder="Paste text here, or upload a PDF below…" oninput="updateWordCount()"></textarea>
+        </div>
+
+        <!-- PDF upload -->
+        <div class="upload-zone" id="upload-zone"
+          onclick="document.getElementById('pdf-input').click()"
+          ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+          <span class="upload-icon">📄</span>
+          <span class="upload-text"><strong>Upload PDF</strong> or drag & drop</span>
+          <span class="upload-sub">Annual reports, 10-K, 10-Q, earnings transcripts</span>
+          <input type="file" id="pdf-input" accept=".pdf,application/pdf" onchange="handlePdf(this.files[0])" />
+        </div>
+        <div class="file-pill" id="file-pill">
+          <span id="file-pill-name"></span>
+          <button onclick="removePdf()">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template questions -->
+    <div class="templates" id="templates">
+      <div class="templates-label">Quick questions after analysis:</div>
+      <div class="template-pills" id="template-pills"></div>
+    </div>
+
+    <!-- Analyze button -->
+    <button class="btn-analyze" id="btn-analyze" onclick="analyze()">
+      <div class="spinner" id="spinner"></div>
+      <span id="btn-text">⬡ Analyze</span>
+    </button>
+
+    <div class="error-box" id="error-box"></div>
+
+    <!-- Result -->
+    <div class="result-section" id="result-section">
+
+      <div class="result-meta" id="result-meta"></div>
+
+      <div class="result-card" id="result-card">
+        <div class="result-text" id="result-text"></div>
+      </div>
+
+      <div class="result-actions">
+        <button class="action-btn" onclick="copyResult()">⎘ Copy</button>
+        <button class="action-btn" onclick="exportResult('md')">↓ Export .md</button>
+        <button class="action-btn" onclick="exportResult('txt')">↓ Export .txt</button>
+      </div>
+
+      <!-- Q&A -->
+      <div class="qa-section">
+        <div class="qa-title">Ask a follow-up</div>
+        <div class="qa-messages" id="qa-messages"></div>
+        <div class="qa-input-row">
+          <input type="text" id="qa-input"
+            placeholder="e.g. What did the CFO say about margins?"
+            onkeydown="if(event.key==='Enter') askQuestion()" />
+          <button class="qa-send" onclick="askQuestion()">Ask ↗</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
